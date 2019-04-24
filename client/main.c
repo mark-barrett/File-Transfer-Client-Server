@@ -101,7 +101,11 @@ int main(int argc, char *argv[]) {
 		
 				// Loop through the block size and read the file block by block
 				while((block_size = fread(file_buffer, sizeof(char), 512, fp)) > 0) {
-					printf("Data Sent: %d = %d\n", i, block_size);
+					
+					// Dont print all of the time, it hinders the view
+					if(i % 12  == 0) {
+						printf("Data Sent: %dkbs\n", (i*512)/1000);
+					}
 
 					// Send it to the server
 					if(send(sock, file_buffer, block_size, 0) < 0) {

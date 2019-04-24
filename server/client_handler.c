@@ -111,6 +111,10 @@ void *handle_client_thread(void *arg) {
 			int block_size, i = 0;
 
 			// Loop through, accepting blocks
+
+			/* NOTE: I had to put the recv within the while loop as putting it as the condition will make the program continually check up until the condition is no longer true.
+			 * i.e the loop won't be executed. But because the recv function was being called here, it was blocking the success message from being sent as the server was waiting on a message from the client. By placing it inside this is avoided.
+			 */
 			while(block_size > 0) {
 				
 				block_size = recv(client_socket, file_buffer, 512, 0);
