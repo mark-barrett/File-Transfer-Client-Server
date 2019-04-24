@@ -20,6 +20,7 @@ int main(int argc, char *argv[]) {
 	// If we are here there was a filename given.
 	// Create required socket variables
 	int sock;
+	int READSIZE;
 	struct sockaddr_in server;
        	char client_message[500];
 	char server_message[500];
@@ -47,6 +48,27 @@ int main(int argc, char *argv[]) {
 
 	printf("Conntected to the file transfer server.\n");
 	
+	// Infinitely loop for communication
+	while(1) {
+		// The server is dictating the communications, so it will ask for different items in order and the client must return them.
+		if(recv(sock, server_message, 500, 0) < 0) {
+			printf("Error receiving message from server");
+		} else {
+			if(strcmp(server_message, "uid")) {
+				// Need to convert the uid (int) for transfer over sockets
+				char uid_as_string[20];
+
+				sprintf(uid_as_string, "%d", getuid());
+
+				printf("%s", uid_as_string);
+
+				printf("%s", uid_as_string);
+
+				// Send it on
+				// send(sock, data, left,  0);
+			}
+		}
+	}	
 
 	return 0;
 }

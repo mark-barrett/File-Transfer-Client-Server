@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -13,11 +14,9 @@
 #include "client_handler.h"
 
 // As when a thread is created, only 1 argument can be sent, lets create a structure to hold the clients arguments
-typedef struct client_thread_args_t {
-	int socket_fd;
-	struct sockaddr_in client_address;
-	char username[100];
-} client_thread_args_t;
+// Import it from seperate header file. In different file as it is going to be used across different files so its better
+// to import than copy and paste across the files that need it
+#include "client_thread_args.h"
 
 
 int main() {
@@ -72,6 +71,9 @@ int main() {
 
 	// Loop infinitely waiting for incoming connections
 	while(1) {
+		// Allocate memory for the client_thread_args structure
+		client_thread_args = (client_thread_args_t*)malloc(sizeof(*client_thread_args));
+
 		// Accept a connection from a client
 		client_socket = accept(sock,(struct sockaddr*)&client,(socklen_t*)&connection_size);
 
@@ -80,6 +82,9 @@ int main() {
 			recordLog("Couldn't establish connection with client.");
 		} else {
 			recordLog("Connection from client established.");
+
+			// Keep track of the client_socket in the client_thread_args structure
+			client_thread_args->client_sock = client_socket;
 
 			// It was successful, try create a thread for that client
 			// pthread_create will return 0 on success

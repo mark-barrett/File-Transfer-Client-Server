@@ -1,6 +1,6 @@
 CC=gcc
 objects=main.o logger.o client_handler.o
-headers=logger.h client_handler.h
+headers=logger.h client_handler.h client_thread_args.h
 
 server: $(objects)
 	$(CC) -o server $(objects) -lpthread
