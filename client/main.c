@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
@@ -28,6 +29,12 @@ int main(int argc, char *argv[]) {
 	// Copy them in
 	strcpy(filename, argv[1]);
 	strcpy(path, argv[2]);
+	
+	// Check if that file exists before continuing
+	if(access(filename, F_OK) == -1) {
+		printf("That file does not exist.\n");
+		return 0;
+	}
 
 	// If we are here there was a filename given.
 	// Create required socket variables
@@ -72,10 +79,6 @@ int main(int argc, char *argv[]) {
 
 				sprintf(uid_as_string, "%d", getuid());
 
-				printf("%s", uid_as_string);
-
-				printf("%s", uid_as_string);
-
 				// Send it on
 				send(sock, uid_as_string, sizeof(uid_as_string), 0);
 			} else if(strcmp(server_message, "filename") == 0) {
@@ -83,11 +86,42 @@ int main(int argc, char *argv[]) {
 				send(sock, filename, sizeof(filename), 0);
 			} else if(strcmp(server_message, "path") == 0) {
 				send(sock, path, sizeof(path), 0);
+			} else if(strcmp(server_message, "sendfile") == 0) {
+				// If the file is to be sent to the server.
+				char file_buffer[512];
+				printf("Sending %s to the server, please wait...\n", filename);
+				
+				// Open the file
+				FILE *fp = fopen(filename, "r");
+				
+				// Use memset to set 0's in the entire value of the buffer so that is there is unused elements they are 0
+				memset(file_buffer, 0, 512);
+
+				int block_size, i=0;
+		
+				// Loop through the block size and read the file block by block
+				while((block_size = fread(file_buffer, sizeof(char), 512, fp)) > 0) {
+					printf("Data Sent: %d = %d\n", i, block_size);
+
+					// Send it to the server
+					if(send(sock, file_buffer, block_size, 0) < 0) {
+						printf("Error sending data:\n");
+					}
+					
+					// Reset all data back to 0s
+					memset(file_buffer, 0, 512);
+					i++;
+
+					// Here
+				}
+
+
+			} else if(strcmp(server_message, "success") == 0) {
+				printf("File %s transferred to the %s directory succesfully!\n", filename, path);
+				return 0;
 			}
 		}
 
-
-		printf("Howya");
 	}	
 
 	return 0;

@@ -63,13 +63,75 @@ void *handle_client_thread(void *arg) {
 		// Receive the path
 		READSIZE = recv(client_socket, client_message, 500, 0);
 
-		recordLog("Received Path");
+		recordLog("Received Path:");
 		recordLog(client_message);
 
 		// Copy the path into the local variable
 		strcpy(path, client_message);
 
 		/* Now all of the back and fourth for information is complete, lets check to see if the user has access to that directory */
+		
+
+		// Send a prompt to send the file as the user is verified as being allowed to send the file to this directory
+		write(client_socket, "sendfile", 500);
+		
+		// Full path
+		char full_path[600];
+
+		strcat(full_path, "/var/www/html/intranet/");
+
+		strcat(full_path, path);
+
+		// Concat the name of the file with the path, forward slash and name
+		strcat(full_path, "/");
+
+		strcat(full_path, filename);
+
+		// Define the buffer, same size as the buffer in the client so we can read in blocks
+		char file_buffer[512];
+
+		// Open the file for writing/create it
+		FILE *fp = fopen(full_path, "w");
+
+		// Temp String for logs
+		char temp[1000];
+
+		// Check if that worked
+		if(fp == NULL) {
+
+			strcat(temp, "File ");
+			strcat(temp, filename);
+			strcat(temp, " could not be created or opened on the server.");
+
+			return NULL;
+		} else {
+			// Memset to fill buffer with 0s
+			memset(file_buffer, 0, 512);
+
+			int block_size, i = 0;
+
+			// Loop through, accepting blocks
+			while(block_size > 0) {
+				
+				block_size = recv(client_socket, file_buffer, 512, 0);
+
+				sprintf(temp, "Data Received %d = %d\n", i, block_size);
+
+				int write_sz = fwrite(file_buffer, sizeof(char), block_size, fp);
+				memset(file_buffer, 0, 512);
+				i++;
+			}
+
+			recordLog("Transfer Complete!");
+
+			// Send a message telling the client the transfer was successful
+			write(client_socket, "success", 500);
+
+			recordLog("Here");		
+			fclose(fp);
+
+			return NULL;
+		}
 
 	}
 }
