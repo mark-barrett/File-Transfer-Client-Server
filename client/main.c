@@ -12,10 +12,22 @@
 int main(int argc, char *argv[]) {
 
 	// Make sure a file name was specified
-	if(argc != 2) {
-		printf("A filename needs to be given for transfer.\n");
+	if(argc == 2) {
+		printf("A path needs to be provided like this: ./transferFile [filename] [path-on-server]\n");
 		return 0;
 	}
+	else if(argc < 2) {
+		printf("A filename needs to be given for transfer, like this: /transferFile [filename] [path-on-server]\n");
+		return 0;
+	}
+
+	// Set the filename and the path from the command line arguments
+	char filename[200];
+	char path[200];
+
+	// Copy them in
+	strcpy(filename, argv[1]);
+	strcpy(path, argv[2]);
 
 	// If we are here there was a filename given.
 	// Create required socket variables
@@ -54,7 +66,7 @@ int main(int argc, char *argv[]) {
 		if(recv(sock, server_message, 500, 0) < 0) {
 			printf("Error receiving message from server");
 		} else {
-			if(strcmp(server_message, "uid")) {
+			if(strcmp(server_message, "uid") == 0) {
 				// Need to convert the uid (int) for transfer over sockets
 				char uid_as_string[20];
 
@@ -65,9 +77,17 @@ int main(int argc, char *argv[]) {
 				printf("%s", uid_as_string);
 
 				// Send it on
-				// send(sock, data, left,  0);
+				send(sock, uid_as_string, sizeof(uid_as_string), 0);
+			} else if(strcmp(server_message, "filename") == 0) {
+				// Send the filename
+				send(sock, filename, sizeof(filename), 0);
+			} else if(strcmp(server_message, "path") == 0) {
+				send(sock, path, sizeof(path), 0);
 			}
 		}
+
+
+		printf("Howya");
 	}	
 
 	return 0;
