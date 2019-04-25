@@ -123,6 +123,9 @@ int main(int argc, char *argv[]) {
 			} else if(strcmp(server_message, "success") == 0) {
 				printf("File %s transferred to the %s directory succesfully!\n", filename, path);
 				return 0;
+			} else if(strcmp(server_message, "failure-permission") == 0) {
+				printf("Sorry, you do not have permission to upload to the %s directory, aborting transfer.\n", path);
+				return 0;
 			}
 		}
 

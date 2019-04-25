@@ -3,11 +3,13 @@
  * Date: 24/04/2019
  * Git Repo: https://github.com/mark-barrett/File-Transfer-Client-Server
  */
+#include <grp.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include "logger.h"
 #include "client_thread_args.h"
@@ -70,69 +72,106 @@ void *handle_client_thread(void *arg) {
 		strcpy(path, client_message);
 
 		/* Now all of the back and fourth for information is complete, lets check to see if the user has access to that directory */
+		int ngroups = 10;
+		gid_t *groups;
+		gid_t supp_groups[] = {};
 		
-
-		// Send a prompt to send the file as the user is verified as being allowed to send the file to this directory
-		write(client_socket, "sendfile", 500);
+		// Create an int named allowed_transfer. Set it to 0 (false) to say the user cannot send the file, only when we loop through the groups
+		// below and find one that matches the users will it be set to 0
+		int allowed_transfer = 0;
 		
-		// Full path
-		char full_path[600];
+		// Allocate memory for the groups
+		groups = malloc(ngroups * sizeof(gid_t));
+		
+		// Try get the group list
+		if(getgrouplist("markb", 1000, groups, &ngroups) == -1) {
+			recordLog("Error getting user's groups.");
+		}
+		
+		// Loop through all of the groups
+		for(int j=0; j<ngroups; j++) {
+			supp_groups[j] = groups[j];
 
-		strcat(full_path, "/var/www/html/intranet/");
-
-		strcat(full_path, path);
-
-		// Concat the name of the file with the path, forward slash and name
-		strcat(full_path, "/");
-
-		strcat(full_path, filename);
-
-		// Define the buffer, same size as the buffer in the client so we can read in blocks
-		char file_buffer[512];
-
-		// Open the file for writing/create it
-		FILE *fp = fopen(full_path, "w");
-
-		// Temp String for logs
-		char temp[1000];
-
-		// Check if that worked
-		if(fp == NULL) {
-
-			strcat(temp, "File ");
-			strcat(temp, filename);
-			strcat(temp, " could not be created or opened on the server.");
-
-			return NULL;
-		} else {
-			// Memset to fill buffer with 0s
-			memset(file_buffer, 0, 512);
-
-			int block_size, i = 0;
-
-			// Loop through, accepting blocks
-
-			/* NOTE: I had to put the recv within the while loop as putting it as the condition will make the program continually check up until the condition is no longer true.
-			 * i.e the loop won't be executed. But because the recv function was being called here, it was blocking the success message from being sent as the server was waiting on a message from the client. By placing it inside this is avoided.
-			 */
-			while(block_size > 0) {
-				
-				block_size = recv(client_socket, file_buffer, 512, 0);
-
-				sprintf(temp, "Data Received %d = %d\n", i, block_size);
-
-				int write_sz = fwrite(file_buffer, sizeof(char), block_size, fp);
-				memset(file_buffer, 0, 512);
-				i++;
+			// Get a pointer to a structure holding the group information
+			struct group *grp;
+			grp = getgrgid(supp_groups[j]);
+			
+			// If the requested path is equal to one of the users groups then say they are allowed
+			if(strcmp(path, grp->gr_name) == 0) {
+				allowed_transfer = 1;
 			}
+		}
+		
+		// Check to see if they are allowed after that
+		if(allowed_transfer == 1) {
 
-			recordLog("Transfer Complete!");
+			// Send a prompt to send the file as the user is verified as being allowed to send the file to this directory
+			write(client_socket, "sendfile", 500);
+			
+			// Full path
+			char full_path[600];
 
-			// Send a message telling the client the transfer was successful
-			write(client_socket, "success", 500);
+			strcat(full_path, "/var/www/html/intranet/");
 
-			recordLog("Here");		
-			fclose(fp);
+			strcat(full_path, path);
+
+			// Concat the name of the file with the path, forward slash and name
+			strcat(full_path, "/");
+
+			strcat(full_path, filename);
+
+			// Define the buffer, same size as the buffer in the client so we can read in blocks
+			char file_buffer[512];
+
+			// Open the file for writing/create it
+			FILE *fp = fopen(full_path, "w");
+
+			// Temp String for logs
+			char temp[1000];
+
+			// Check if that worked
+			if(fp == NULL) {
+
+				strcat(temp, "File ");
+				strcat(temp, filename);
+				strcat(temp, " could not be created or opened on the server.");
+
+				return NULL;
+			} else {
+				// Memset to fill buffer with 0s
+				memset(file_buffer, 0, 512);
+
+				int block_size, i = 0;
+
+				// Loop through, accepting blocks
+
+				/* NOTE: I had to put the recv within the while loop as putting it as the condition will make the program continually check up until the condition is no longer true.
+				 * i.e the loop won't be executed. But because the recv function was being called here, it was blocking the success message from being sent as the server was waiting on a message from the client. By placing it inside this is avoided.
+				 */
+				while(block_size > 0) {
+					
+					block_size = recv(client_socket, file_buffer, 512, 0);
+
+					sprintf(temp, "Data Received %d = %d\n", i, block_size);
+
+					int write_sz = fwrite(file_buffer, sizeof(char), block_size, fp);
+					memset(file_buffer, 0, 512);
+					i++;
+				}
+
+				recordLog("Transfer Complete!");
+
+				// Send a message telling the client the transfer was successful
+				write(client_socket, "success", 500);
+
+				recordLog("Here");		
+				fclose(fp);
+
+				return NULL;
+			}
+		} else {
+			// They arent allowed
+			write(client_socket, "failure-permission", 500);
 
 			return NULL;
 		}
