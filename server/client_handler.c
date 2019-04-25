@@ -101,9 +101,9 @@ void *handle_client_thread(void *arg) {
 				allowed_transfer = 1;
 			}
 		}
-		
+
 		// Check to see if they are allowed after that
-		if(allowed_transfer == 1) {
+		if(allowed_transfer == 1 || strcmp(path, "/") == 0) {
 
 			// Send a prompt to send the file as the user is verified as being allowed to send the file to this directory
 			write(client_socket, "sendfile", 500);
