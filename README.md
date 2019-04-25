@@ -5,3 +5,26 @@ Basic Operation:
 - The server will then check to see if the user has access to that particular directory and if they do will issue the "sendfile" prompt, where the client will then send the entire contents of the file in blocks.
 - The server will then save this to the appropriate file.
 - The server will return "success" or "failure" messages throughout if problems are encountered.
+
+For demonstration purposes, there are three groups:
+- Marketing
+- Offers
+- Promotions
+- Sales
+
+And three users
+- markb
+- jeanc
+- ashleyf
+
+markb has access to:
+- Marketing
+- Sales
+
+jeanc has access to:
+- Promotions
+- Sales
+
+ashleyf has access to:
+- Marketing
+- Offers
