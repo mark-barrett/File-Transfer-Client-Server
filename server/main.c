@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include "mutex.h"
 #include "client_handler.h"
 
 // As when a thread is created, only 1 argument can be sent, lets create a structure to hold the clients arguments
@@ -69,6 +70,11 @@ int main() {
 	printf("Waiting for incoming connections from clients.\n");
 	
 	connection_size = sizeof(struct sockaddr_in);
+	
+	// Init the mutex
+	if(pthread_mutex_init(&lock, NULL) != 0) {
+		printf("Cannot init mutex\n");
+	}
 
 	// Loop infinitely waiting for incoming connections
 	while(1) {

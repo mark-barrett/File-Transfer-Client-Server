@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include "mutex.h"
 #include "client_thread_args.h"
 
 void *handle_client_thread(void *arg) {
@@ -31,7 +32,7 @@ void *handle_client_thread(void *arg) {
 
 	// Get the client's socket instance from the struct
 	int client_socket = client_thread_args->client_sock;
-	
+		
 	// The first interaction using this somewhat "custom" protocol is to firstly ask for the username of the user. So prompt that.
 	while(1) {
 		// 1. We want the uid first
@@ -60,6 +61,9 @@ void *handle_client_thread(void *arg) {
 
 		// Copy the path into the local variable
 		strcpy(path, client_message);
+		
+		// Lock the mutex
+		pthread_mutex_lock(&lock);
 
 		/* Now all of the back and fourth for information is complete, lets check to see if the user has access to that directory */
 		int ngroups = 10;
@@ -134,6 +138,9 @@ void *handle_client_thread(void *arg) {
 			seteuid(user_id);
 			setegid(user_id);
 
+			// Unlock the mutex
+			pthread_mutex_unlock(&lock);
+
 			return NULL;			
 		} else {
 			// User has permission. Instruct to send the file.
@@ -179,6 +186,9 @@ void *handle_client_thread(void *arg) {
 					
 					// Cancel thread
 					pthread_cancel(pthread_self());
+					
+					// Unlock the mutex
+					pthread_mutex_unlock(&lock);
 
 					// Return null
 					return NULL;
