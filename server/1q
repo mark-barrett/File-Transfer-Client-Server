@@ -2,7 +2,8 @@
  * Author: Mark Barrett
  * Date: 24/04/2019
  * Git Repo: https://github.com/mark-barrett/File-Transfer-Client-Server
-*/
+ */
+#include <grp.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,6 +12,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include "logger.h"
 #include "client_thread_args.h"
 
 void *handle_client_thread(void *arg) {
@@ -40,6 +42,9 @@ void *handle_client_thread(void *arg) {
 		// Receive the username
 		READSIZE = recv(client_socket, client_message, 500, 0);
 		
+		recordLog("Recived UID:");	
+		recordLog(client_message);
+		
 		// Convert the users uid to an int
 		user_id = atoi(client_message);
 		
@@ -49,6 +54,9 @@ void *handle_client_thread(void *arg) {
 		// Receive the filename
 		READSIZE = recv(client_socket, client_message, 500, 0);
 		
+		recordLog("Received Filename:");
+		recordLog(client_message);
+		
 		// Copy the filename into the local variable
 		strcpy(filename, client_message);
 
@@ -57,6 +65,9 @@ void *handle_client_thread(void *arg) {
 
 		// Receive the path
 		READSIZE = recv(client_socket, client_message, 500, 0);
+
+		recordLog("Received Path:");
+		recordLog(client_message);
 
 		// Copy the path into the local variable
 		strcpy(path, client_message);
@@ -76,12 +87,13 @@ void *handle_client_thread(void *arg) {
 		
 		// Try get the group list
 		if(getgrouplist(pws->pw_name, user_id, groups, &ngroups) == -1) {
-			printf("Error getting user's groups.");
+			recordLog("Error getting user's groups.");
 		}
 		
 		// Loop through all of the groups
 		for(int j=0; j<ngroups; j++) {
 			supp_groups[j] = groups[j];
+			printf(" - %d", supp_groups[j]);
 		}
 		
 		uid_t uid = getuid();
@@ -89,12 +101,24 @@ void *handle_client_thread(void *arg) {
 		uid_t ueid = geteuid();
 		uid_t geid = getegid();
 		
+		printf("User ID: %d\n", uid);
+		printf("Group ID: %d\n", gid);
+		printf("E User ID: %d\n", ueid);
+		printf("E Group ID: %d\n", geid);
+		printf("UID: %d\n", user_id);
+
 		// Change to that user
 		setgroups(10, supp_groups);
 		setreuid(user_id, uid);
 		setregid(user_id, gid);
 		seteuid(user_id);
 		setegid(user_id);
+			
+		printf("User ID: %d\n", getuid());
+		printf("Group ID: %d\n", getgid());
+		printf("E User ID: %d\n", geteuid());
+		printf("E Group ID: %d\n", getegid());
+		printf("UID: %d\n", user_id);	
 		
 		// Now that we have changed to that user, try and open the file
 		char full_path[600];
@@ -124,16 +148,11 @@ void *handle_client_thread(void *arg) {
 
 			sprintf(temp_message, "Permission denied for the %s directory.", path);
 
+			//recordLog(temp_message);
+
 			// Return the error and close
 			write(client_socket, "failure-permission", 500);
 			
-			// Change back to root
-			user_id = 0;
-			setreuid(user_id, uid);
-			setregid(user_id, gid);
-			seteuid(user_id);
-			setegid(user_id);
-
 			return NULL;			
 		} else {
 			// User has permission. Instruct to send the file.
@@ -145,47 +164,51 @@ void *handle_client_thread(void *arg) {
 
 			// Loop through, accepting blocks
 
+			/* NOTE: I had to put the recv within the while loop as putting it as the condition will make the program continually check up until the condition is no longer true.
+				 * i.e the loop won't be executed. But because the recv function was being called here, it was blocking the success message from being sent as the server was waiting on a message from the client. By placing it inside this is avoided.
+				 */
 			while((block_size = recv(client_socket, file_buffer, 512, 0)) > 0) {
 				
 				sprintf(temp, "Data Received %d = %d\n", i, block_size);
 				
-				int write_sz = fwrite(file_buffer, sizeof(char), block_size, fp);
+				printf("%s", block_size);
 
+				int write_sz = fwrite(file_buffer, sizeof(char), block_size, fp);
 				memset(file_buffer, 0, 512);
 				i++;
-				
-				// Check if it was the last block	
-				if(block_size < 512) {
-					// It was, send success message
-					write(client_socket, "success", 500);
-					
-					// Close the file
-					fclose(fp);
-					
-					// Change back to root
-					user_id = 0;
-					setreuid(user_id, uid);
-					setregid(user_id, gid);
-					seteuid(user_id);
-					setegid(user_id);
-					
-					free(client_thread_args);
-
-					// Close the socket
-					close(client_socket);
-					
-					// Free full path
-					strcpy(full_path, "");
-					
-					// Cancel thread
-					pthread_cancel(pthread_self());
-
-					// Return null
-					return NULL;
-				}	
 
 			}
+
+			perror("Howya:");
+
+			//recordLog("Transfer Complete!");
+
+			// Send a message telling the client the transfer was successful
+			write(client_socket, "success", 500);
+
+			//recordLog("Here");		
+			fclose(fp);
+
+			// Change back to root
+			user_id = 0;
+			setreuid(user_id, uid);
+			setregid(user_id, gid);
+			seteuid(user_id);
+			setegid(user_id);		
+			
 		}
+
+		// Close the socket
+		close(client_socket);
+
+		// Free memory
+		free(client_thread_args);
+
+		// Kill the thread
+		pthread_cancel(pthread_self());
+
+		// Return
+		return NULL;
 			
 	}
 }

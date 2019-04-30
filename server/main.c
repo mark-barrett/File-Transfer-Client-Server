@@ -10,7 +10,6 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
-#include "logger.h"
 #include "client_handler.h"
 
 // As when a thread is created, only 1 argument can be sent, lets create a structure to hold the clients arguments
@@ -18,10 +17,12 @@
 // to import than copy and paste across the files that need it
 #include "client_thread_args.h"
 
+// Signal handler to close socket when stopped
+void signal_handler(int signal);
 
 int main() {
 
-	recordLog("Server starting...");
+	printf("Server starting...\n");
 	
 	// Create variables for the threading. The attributes, args, thread and client address
 	pthread_attr_t pthread_attr;
@@ -43,9 +44,9 @@ int main() {
 
 	// If creating the socket failed
 	if(sock == -1) {
-		recordLog("Error. Could not create the socket.");
+		printf("Error. Could not create the socket.\n");
 	} else {
-		recordLog("Socket created successfully.");
+		printf("Socket created successfully.\n");
 	}
 	
 	// Assign the server variables
@@ -57,15 +58,15 @@ int main() {
 
 	// Bind the socket
 	if(bind(sock,(struct sockaddr*)&server, sizeof(server)) < 0) {
-		recordLog("Error binding socket");
+		printf("Error binding socket\n");
 		return 1;
 	} else {
-		recordLog("Socket bound.");
+		printf("Socket bound.\n");
 	}
 
 	// Listen for a connection
-	listen(sock, 3);
-	recordLog("Waiting for incoming connections from clients");
+	listen(sock, 5);
+	printf("Waiting for incoming connections from clients.\n");
 	
 	connection_size = sizeof(struct sockaddr_in);
 
@@ -73,28 +74,31 @@ int main() {
 	while(1) {
 		// Allocate memory for the client_thread_args structure
 		client_thread_args = (client_thread_args_t*)malloc(sizeof(*client_thread_args));
-
+		
 		// Accept a connection from a client
 		client_socket = accept(sock,(struct sockaddr*)&client,(socklen_t*)&connection_size);
-
+		
 		// Check if successful
 		if(client_socket < 0) {
-			recordLog("Couldn't establish connection with client.");
+			printf("Couldn't establish connection with the client\n");
 		} else {
-			recordLog("Connection from client established.");
+			printf("Just established a connection with the client\n");
 
 			// Keep track of the client_socket in the client_thread_args structure
 			client_thread_args->client_sock = client_socket;
-
+			
 			// It was successful, try create a thread for that client
 			// pthread_create will return 0 on success
 			if(pthread_create(&pthread, &pthread_attr, handle_client_thread, (void*)client_thread_args) != 0) {
-				recordLog("Error creating thread for client.");
-			} else {
-				recordLog("Succesfully created thread for client.");
+				printf("Error creating thread for client.\n");
 			}
 		}
+
 	}
 
 
+}
+
+void signal_handler(int signal) {
+	exit(0);
 }

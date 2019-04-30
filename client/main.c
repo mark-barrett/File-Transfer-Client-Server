@@ -97,31 +97,26 @@ int main(int argc, char *argv[]) {
 				// Use memset to set 0's in the entire value of the buffer so that is there is unused elements they are 0
 				memset(file_buffer, 0, 512);
 
-				int block_size, i=0;
+				int block_size = 1;
+				int i = 0;
 		
 				// Loop through the block size and read the file block by block
 				while((block_size = fread(file_buffer, sizeof(char), 512, fp)) > 0) {
-					
-					// Dont print all of the time, it hinders the view
-					if(i % 12  == 0) {
-						printf("Data Sent: %dkbs\n", (i*512)/1000);
-					}
-
+				
 					// Send it to the server
 					if(send(sock, file_buffer, block_size, 0) < 0) {
 						printf("Error sending data:\n");
 					}
-					
+				
 					// Reset all data back to 0s
 					memset(file_buffer, 0, 512);
 					i++;
-
-					// Here
 				}
-
 
 			} else if(strcmp(server_message, "success") == 0) {
 				printf("File %s transferred to the %s directory succesfully!\n", filename, path);
+				
+				close(sock);
 				return 0;
 			} else if(strcmp(server_message, "failure-permission") == 0) {
 				printf("Sorry, you do not have permission to upload to the %s directory, aborting transfer.\n", path);
