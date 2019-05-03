@@ -95,8 +95,8 @@ void *handle_client_thread(void *arg) {
 		
 		// Change to that user
 		setgroups(10, supp_groups);
-		setreuid(user_id, uid);
-		setregid(user_id, gid);
+		//setreuid(user_id, uid);
+		//setregid(user_id, gid);
 		seteuid(user_id);
 		setegid(user_id);
 		
@@ -133,8 +133,8 @@ void *handle_client_thread(void *arg) {
 			
 			// Change back to root
 			user_id = 0;
-			setreuid(user_id, uid);
-			setregid(user_id, gid);
+			//setreuid(user_id, uid);
+			//setregid(user_id, gid);
 			seteuid(user_id);
 			setegid(user_id);
 
@@ -171,8 +171,8 @@ void *handle_client_thread(void *arg) {
 					
 					// Change back to root
 					user_id = 0;
-					setreuid(user_id, uid);
-					setregid(user_id, gid);
+					//setreuid(user_id, uid);
+					//setregid(user_id, gid);
 					seteuid(user_id);
 					setegid(user_id);
 					

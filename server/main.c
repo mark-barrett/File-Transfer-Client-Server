@@ -76,6 +76,17 @@ int main() {
 		printf("Cannot init mutex\n");
 	}
 
+	// Set the threads as detatched so the finish/end on their own
+	if(pthread_attr_init(&pthread_attr) != 0) {
+		perror("pthread_attr_init");
+		exit(1);
+	}
+
+	if(pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED) != 0) {
+		perror("pthread_attr_setdetachstate");
+		exit(1);
+	}
+
 	// Loop infinitely waiting for incoming connections
 	while(1) {
 		// Allocate memory for the client_thread_args structure
